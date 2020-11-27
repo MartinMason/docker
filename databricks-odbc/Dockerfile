@@ -40,9 +40,16 @@ FROM mcr.microsoft.com/windows/servercore:1909
 ARG DOTNET_VERSION
 ARG ASPNET_VERSION
 
-COPY . .
-WORKDIR /drivers 
-RUN msiexec /i "Simba Spark 2.6 64-bit.msi" /qn /norestart IACCEPTMSODBCSQLLICENSETERMS=YES 
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+
+# Download Simba Databricks ODBC drivers
+RUN Invoke-WebRequest -OutFile simba_odbc_driver.zip https://databricks.com/wp-content/uploads/drivers-2020/SimbaSparkODBC-2.6.16.1019-Windows-64bit.zip; `
+    Expand-Archive -LiteralPath simba_odbc_driver.zip -DestinationPath simba_drivers; `
+    Start-Process 'C:\simba_drivers\SimbaSparkODBC-2.6.16.1019-Windows-64bit\Simba Spark 2.6 64-bit.msi' -ArgumentList '/qn /norestart IACCEPTMSODBCSQLLICENSETERMS=YES' -Wait; `
+    Remove-Item -LiteralPath "simba_drivers" -Force -Recurse; `
+    Remove-Item -Force simba_odbc_driver.zip
+
+SHELL ["cmd", "/S", "/C"]
 
 ENV `
     # Configure web servers to bind to port 80 when present
